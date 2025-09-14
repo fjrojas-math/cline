@@ -38,6 +38,8 @@ export async function copilotPollAccessToken(
 ): Promise<CopilotAccessTokenResponse> {
 	const { deviceCode, interval } = request
 	const result = await pollForAccessToken(deviceCode, interval)
+	// Persist the GitHub access_token securely for future Copilot token renewals
+	controller.stateManager.setSecret("copilotAccessToken", result.access_token)
 	return CopilotAccessTokenResponse.create({
 		accessToken: result.access_token,
 		tokenType: result.token_type,
@@ -57,6 +59,8 @@ export async function copilotGetCopilotToken(
 ): Promise<CopilotGetCopilotTokenResponse> {
 	const { accessToken } = request
 	const result = await getCopilotToken(accessToken)
+	// Persist the Copilot token as copilotApiKey for internal API usage
+	controller.stateManager.setSecret("copilotApiKey", result.token)
 	return CopilotGetCopilotTokenResponse.create({
 		token: result.token,
 		expiresAt: result.expires_at,
