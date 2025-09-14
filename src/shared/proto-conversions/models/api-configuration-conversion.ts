@@ -188,6 +188,8 @@ function convertApiProviderToProto(provider: string | undefined): ProtoApiProvid
 	switch (provider) {
 		case "anthropic":
 			return ProtoApiProvider.ANTHROPIC
+		case "copilot":
+			return ProtoApiProvider.COPILOT
 		case "openrouter":
 			return ProtoApiProvider.OPENROUTER
 		case "bedrock":
@@ -266,6 +268,8 @@ function convertProtoToApiProvider(provider: ProtoApiProvider): ApiProvider {
 	switch (provider) {
 		case ProtoApiProvider.ANTHROPIC:
 			return "anthropic"
+		case ProtoApiProvider.COPILOT:
+			return "copilot"
 		case ProtoApiProvider.OPENROUTER:
 			return "openrouter"
 		case ProtoApiProvider.BEDROCK:

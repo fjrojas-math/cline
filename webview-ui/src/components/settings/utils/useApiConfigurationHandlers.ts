@@ -60,13 +60,21 @@ export const useApiConfigurationHandlers = () => {
 		value: ApiConfiguration[PlanK] & ApiConfiguration[ActK], // Intersection ensures value is compatible with both field types
 		currentMode: Mode,
 	) => {
+		// Normaliza el valor del provider para que siempre sea minúsculas "copilot"
+		let normalizedValue = value
+		if (
+			(fieldPair.plan === "planModeApiProvider" || fieldPair.act === "actModeApiProvider") &&
+			(value === "COPILOT" || value === "copilot")
+		) {
+			normalizedValue = "copilot" as ApiConfiguration[PlanK] & ApiConfiguration[ActK]
+		}
 		if (planActSeparateModelsSetting) {
 			const targetField = fieldPair[currentMode]
-			await handleFieldChange(targetField, value)
+			await handleFieldChange(targetField, normalizedValue)
 		} else {
 			await handleFieldsChange({
-				[fieldPair.plan]: value,
-				[fieldPair.act]: value,
+				[fieldPair.plan]: normalizedValue,
+				[fieldPair.act]: normalizedValue,
 			})
 		}
 	}

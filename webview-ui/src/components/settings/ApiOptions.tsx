@@ -17,6 +17,7 @@ import { BedrockProvider } from "./providers/BedrockProvider"
 import { CerebrasProvider } from "./providers/CerebrasProvider"
 import { ClaudeCodeProvider } from "./providers/ClaudeCodeProvider"
 import { ClineProvider } from "./providers/ClineProvider"
+import { CopilotProvider } from "./providers/CopilotProvider"
 import { DeepSeekProvider } from "./providers/DeepSeekProvider"
 import { DifyProvider } from "./providers/DifyProvider"
 import { DoubaoProvider } from "./providers/DoubaoProvider"
@@ -128,6 +129,7 @@ const ApiOptions = ({ showModelOptions, apiErrorMessage, modelIdErrorMessage, is
 			{ value: "openrouter", label: "OpenRouter" },
 			{ value: "gemini", label: "Google Gemini" },
 			{ value: "openai", label: "OpenAI Compatible" },
+			{ value: "copilot", label: "GitHub Copilot" },
 			{ value: "anthropic", label: "Anthropic" },
 			{ value: "bedrock", label: "Amazon Bedrock" },
 			{ value: "vscode-lm", label: "VS Code LM API" },
@@ -396,6 +398,10 @@ const ApiOptions = ({ showModelOptions, apiErrorMessage, modelIdErrorMessage, is
 
 			{apiConfiguration && selectedProvider === "openai" && (
 				<OpenAICompatibleProvider currentMode={currentMode} isPopup={isPopup} showModelOptions={showModelOptions} />
+			)}
+
+			{apiConfiguration && selectedProvider === "copilot" && (
+				<CopilotProvider currentMode={currentMode} isPopup={isPopup} showModelOptions={showModelOptions} />
 			)}
 
 			{apiConfiguration && selectedProvider === "vercel-ai-gateway" && (

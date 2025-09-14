@@ -1,6 +1,5 @@
 import {
 	ApiConfiguration,
-	ApiProvider,
 	anthropicDefaultModelId,
 	anthropicModels,
 	askSageDefaultModelId,
@@ -69,7 +68,7 @@ import { Mode } from "@shared/storage/types"
  * Interface for normalized API configuration
  */
 export interface NormalizedApiConfig {
-	selectedProvider: ApiProvider
+	selectedProvider: string
 	selectedModelId: string
 	selectedModelInfo: ModelInfo
 }
@@ -81,8 +80,8 @@ export function normalizeApiConfiguration(
 	apiConfiguration: ApiConfiguration | undefined,
 	currentMode: Mode,
 ): NormalizedApiConfig {
-	const provider =
-		(currentMode === "plan" ? apiConfiguration?.planModeApiProvider : apiConfiguration?.actModeApiProvider) || "anthropic"
+	const provider = ((currentMode === "plan" ? apiConfiguration?.planModeApiProvider : apiConfiguration?.actModeApiProvider) ||
+		"anthropic") as string
 	const modelId = currentMode === "plan" ? apiConfiguration?.planModeApiModelId : apiConfiguration?.actModeApiModelId
 
 	const getProviderData = (models: Record<string, ModelInfo>, defaultId: string) => {
@@ -103,6 +102,12 @@ export function normalizeApiConfiguration(
 	}
 
 	switch (provider) {
+		case "copilot":
+			return {
+				selectedProvider: "copilot",
+				selectedModelId: "",
+				selectedModelInfo: openAiModelInfoSaneDefaults,
+			}
 		case "anthropic":
 			return getProviderData(anthropicModels, anthropicDefaultModelId)
 		case "claude-code":
