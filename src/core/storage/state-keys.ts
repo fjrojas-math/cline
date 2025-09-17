@@ -191,6 +191,8 @@ export interface Secrets {
 	basetenApiKey: string | undefined
 	vercelAiGatewayApiKey: string | undefined
 	difyApiKey: string | undefined
+	copilotAccessToken: string | undefined
+	copilotApiKey: string | undefined
 }
 
 export interface LocalState {

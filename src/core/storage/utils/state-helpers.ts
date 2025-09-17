@@ -49,6 +49,8 @@ export async function readSecretsFromDisk(context: ExtensionContext): Promise<Se
 		vercelAiGatewayApiKey,
 		difyApiKey,
 		authNonce,
+		copilotAccessToken,
+		copilotApiKey,
 	] = await Promise.all([
 		context.secrets.get("apiKey") as Promise<string | undefined>,
 		context.secrets.get("openRouterApiKey") as Promise<string | undefined>,
@@ -85,6 +87,8 @@ export async function readSecretsFromDisk(context: ExtensionContext): Promise<Se
 		context.secrets.get("vercelAiGatewayApiKey") as Promise<string | undefined>,
 		context.secrets.get("difyApiKey") as Promise<string | undefined>,
 		context.secrets.get("authNonce") as Promise<string | undefined>,
+		context.secrets.get("copilotAccessToken") as Promise<string | undefined>,
+		context.secrets.get("copilotApiKey") as Promise<string | undefined>,
 	])
 
 	return {
@@ -123,6 +127,8 @@ export async function readSecretsFromDisk(context: ExtensionContext): Promise<Se
 		awsAccessKey,
 		awsSecretKey,
 		awsSessionToken,
+		copilotAccessToken,
+		copilotApiKey,
 	}
 }
 

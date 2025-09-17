@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package cline;
+import "cline/common.proto";
+
+option java_package = "bot.cline.proto";
+option java_multiple_files = true;
+
+/**
+ * Service for GitHub Copilot authentication and utilities.
+ */
+service CopilotService {
+  /**
+   * Starts the device code OAuth flow and returns the user_code and verification_uri.
+   */
+  rpc copilotDeviceCode(EmptyRequest) returns (CopilotDeviceCodeResponse);
+
+  /**
+   * Polls to obtain the access_token after user authorization.
+   */
+  rpc copilotPollAccessToken(CopilotAccessTokenRequest) returns (CopilotAccessTokenResponse);
+
+  /**
+   * Obtains the Copilot Token (JWT) using the GitHub access_token.
+   */
+  rpc copilotGetCopilotToken(CopilotGetCopilotTokenRequest) returns (CopilotGetCopilotTokenResponse);
+}
+
+/**
+ * Response for the Copilot device code OAuth flow.
+ */
+message CopilotDeviceCodeResponse {
+  string device = 1;
+  string user = 2;
+  string verification = 3;
+  int32 interval = 4;
+  int32 expiry = 5;
+}
+
+/**
+ * Request for access_token polling.
+ */
+message CopilotAccessTokenRequest {
+  string device_code = 1;
+  int32 interval = 2;
+}
+
+/**
+ * Response with the GitHub access_token.
+ */
+message CopilotAccessTokenResponse {
+  string access_token = 1;
+  string token_type = 2;
+  string scope = 3;
+}
+
+/**
+ * Request to obtain the Copilot Token (JWT).
+ */
+message CopilotGetCopilotTokenRequest {
+  string access_token = 1;
+}
+
+/**
+ * Response with the Copilot Token (JWT).
+ */
+message CopilotGetCopilotTokenResponse {
+  string token = 1;
+  string expires_at = 2;
+}
