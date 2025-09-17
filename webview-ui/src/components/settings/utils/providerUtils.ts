@@ -103,6 +103,12 @@ export function normalizeApiConfiguration(
 	}
 
 	switch (provider) {
+		case "copilot":
+			return {
+				selectedProvider: provider,
+				selectedModelId: modelId || "",
+				selectedModelInfo: openAiModelInfoSaneDefaults,
+			}
 		case "anthropic":
 			return getProviderData(anthropicModels, anthropicDefaultModelId)
 		case "claude-code":
@@ -619,6 +625,10 @@ export async function syncModeConfigurations(
 		case "cerebras":
 		case "sapaicore":
 		case "zai":
+		case "copilot":
+			updates.planModeApiModelId = sourceFields.apiModelId
+			updates.actModeApiModelId = sourceFields.apiModelId
+			break
 		default:
 			updates.planModeApiModelId = sourceFields.apiModelId
 			updates.actModeApiModelId = sourceFields.apiModelId
