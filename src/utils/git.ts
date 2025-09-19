@@ -468,6 +468,100 @@ function truncateOutput(content: string): string {
 // These are the ONLY new additions needed for workspace detection
 
 /**
+ * Check if the current repository is properly configured for commit signing
+ * and verify if recent commits are being signed
+ * @param cwd - The repository directory
+ * @returns Summary of commit signing status
+ */
+export async function verifyCommitSigningStatus(cwd: string): Promise<{
+	configurationEnabled: boolean
+	recentCommitsSigned: number
+	totalRecentCommits: number
+	signingRate: number
+	lastSignedCommit?: string
+	recommendations: string[]
+}> {
+	try {
+		const isInstalled = await checkGitInstalled()
+		if (!isInstalled) {
+			return {
+				configurationEnabled: false,
+				recentCommitsSigned: 0,
+				totalRecentCommits: 0,
+				signingRate: 0,
+				recommendations: ["Git is not installed"]
+			}
+		}
+
+		const isRepo = await checkGitRepo(cwd)
+		if (!isRepo) {
+			return {
+				configurationEnabled: false,
+				recentCommitsSigned: 0,
+				totalRecentCommits: 0,
+				signingRate: 0,
+				recommendations: ["Not a git repository"]
+			}
+		}
+
+		if (!(await checkGitRepoHasCommits(cwd))) {
+			return {
+				configurationEnabled: false,
+				recentCommitsSigned: 0,
+				totalRecentCommits: 0,
+				signingRate: 0,
+				recommendations: ["Repository has no commits yet"]
+			}
+		}
+
+		const configurationEnabled = await isCommitSigningEnabled(cwd)
+		const commits = await verifyRecentCommitSignatures(cwd, 10)
+		const signedCommits = commits.filter(c => c.signatureStatus.isSigned)
+		const validSignedCommits = signedCommits.filter(c => c.signatureStatus.signatureValid)
+		
+		const signingRate = commits.length > 0 ? Math.round((signedCommits.length / commits.length) * 100) : 0
+		const lastSignedCommit = signedCommits.length > 0 ? signedCommits[0].shortHash : undefined
+
+		const recommendations = []
+		
+		if (!configurationEnabled) {
+			recommendations.push("Enable commit signing with: git config commit.gpgSign true")
+		}
+		
+		if (signedCommits.length === 0) {
+			recommendations.push("No signed commits found in recent history")
+			recommendations.push("Set up GPG key and enable signing to secure your commits")
+		} else if (validSignedCommits.length === 0) {
+			recommendations.push("Signed commits found but signatures cannot be verified")
+			recommendations.push("Import the public key to verify signatures")
+		}
+		
+		if (signingRate < 100 && signedCommits.length > 0) {
+			recommendations.push(`Only ${signingRate}% of recent commits are signed`)
+			recommendations.push("Consider signing all commits for better security")
+		}
+
+		return {
+			configurationEnabled,
+			recentCommitsSigned: signedCommits.length,
+			totalRecentCommits: commits.length,
+			signingRate,
+			lastSignedCommit,
+			recommendations
+		}
+	} catch (error) {
+		console.error("Error verifying commit signing status:", error)
+		return {
+			configurationEnabled: false,
+			recentCommitsSigned: 0,
+			totalRecentCommits: 0,
+			signingRate: 0,
+			recommendations: [`Error: ${error instanceof Error ? error.message : String(error)}`]
+		}
+	}
+}
+
+/**
  * Check if a directory is a Git repository (Stage 3 requirement)
  * @param dirPath - The directory path to check
  * @returns True if it's a Git repository
