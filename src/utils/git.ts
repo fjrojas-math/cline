@@ -10,6 +10,15 @@ export interface GitCommit {
 	subject: string
 	author: string
 	date: string
+	signature?: string // GPG signature information
+}
+
+export interface GitSignatureStatus {
+	isSigned: boolean
+	signatureValid: boolean
+	signerKey?: string
+	signerName?: string
+	error?: string
 }
 
 async function checkGitRepo(cwd: string): Promise<boolean> {
@@ -36,6 +45,157 @@ async function checkGitRepoHasCommits(cwd: string): Promise<boolean> {
 		return true
 	} catch (_error) {
 		return false
+	}
+}
+
+/**
+ * Check the signature status of a specific commit
+ * @param hash - The commit hash to check
+ * @param cwd - The repository directory
+ * @returns GitSignatureStatus object with signature information
+ */
+export async function getCommitSignatureStatus(hash: string, cwd: string): Promise<GitSignatureStatus> {
+	try {
+		const isInstalled = await checkGitInstalled()
+		if (!isInstalled) {
+			return { isSigned: false, signatureValid: false, error: "Git is not installed" }
+		}
+
+		const isRepo = await checkGitRepo(cwd)
+		if (!isRepo) {
+			return { isSigned: false, signatureValid: false, error: "Not a git repository" }
+		}
+
+		if (!(await checkGitRepoHasCommits(cwd))) {
+			return { isSigned: false, signatureValid: false, error: "Repository has no commits yet" }
+		}
+
+		// Use --show-signature to get signature information
+		const { stdout } = await execAsync(`git show --show-signature --no-patch --format="%H" ${hash}`, { cwd })
+		
+		if (stdout.includes("gpg: Signature made")) {
+			// Commit is signed
+			const signatureValid = !stdout.includes("gpg: BAD signature") && 
+								 !stdout.includes("gpg: Can't check signature") &&
+								 !stdout.includes("gpg: No public key")
+			
+			// Extract signer information
+			let signerKey = undefined
+			let signerName = undefined
+			
+			const keyMatch = stdout.match(/gpg: using .* key ([A-F0-9]+)/)
+			if (keyMatch) {
+				signerKey = keyMatch[1]
+			}
+			
+			const nameMatch = stdout.match(/gpg: Good signature from "(.*?)"/)
+			if (nameMatch) {
+				signerName = nameMatch[1]
+			}
+			
+			return {
+				isSigned: true,
+				signatureValid,
+				signerKey,
+				signerName
+			}
+		} else {
+			// Commit is not signed
+			return { isSigned: false, signatureValid: false }
+		}
+	} catch (error) {
+		console.error("Error checking commit signature:", error)
+		return { 
+			isSigned: false, 
+			signatureValid: false, 
+			error: error instanceof Error ? error.message : String(error)
+		}
+	}
+}
+
+/**
+ * Check if commit signing is enabled in the repository
+ * @param cwd - The repository directory
+ * @returns True if commit signing is enabled
+ */
+export async function isCommitSigningEnabled(cwd: string): Promise<boolean> {
+	try {
+		const isInstalled = await checkGitInstalled()
+		if (!isInstalled) {
+			return false
+		}
+
+		const isRepo = await checkGitRepo(cwd)
+		if (!isRepo) {
+			return false
+		}
+
+		// Check commit.gpgSign configuration
+		const { stdout } = await execAsync("git config --get commit.gpgSign", { cwd })
+		const gpgSign = stdout.trim().toLowerCase()
+		
+		return gpgSign === "true"
+	} catch (error) {
+		// If config doesn't exist, signing is disabled by default
+		return false
+	}
+}
+
+/**
+ * Verify commit signatures for recent commits in the repository
+ * @param cwd - The repository directory
+ * @param limit - Number of recent commits to check (default: 10)
+ * @returns Array of commits with their signature status
+ */
+export async function verifyRecentCommitSignatures(cwd: string, limit: number = 10): Promise<Array<GitCommit & { signatureStatus: GitSignatureStatus }>> {
+	try {
+		const isInstalled = await checkGitInstalled()
+		if (!isInstalled) {
+			console.error("Git is not installed")
+			return []
+		}
+
+		const isRepo = await checkGitRepo(cwd)
+		if (!isRepo) {
+			console.error("Not a git repository")
+			return []
+		}
+
+		if (!(await checkGitRepoHasCommits(cwd))) {
+			return []
+		}
+
+		// Get recent commits
+		const { stdout } = await execAsync(
+			`git log -n ${limit} --format="%H%n%h%n%s%n%an%n%ad" --date=short`,
+			{ cwd }
+		)
+
+		const commits: GitCommit[] = []
+		const lines = stdout.trim().split("\n").filter((line) => line !== "--")
+
+		for (let i = 0; i < lines.length; i += 5) {
+			commits.push({
+				hash: lines[i],
+				shortHash: lines[i + 1],
+				subject: lines[i + 2],
+				author: lines[i + 3],
+				date: lines[i + 4],
+			})
+		}
+
+		// Add signature status to each commit
+		const commitsWithSignatures = await Promise.all(
+			commits.map(async (commit) => {
+				const signatureStatus = await getCommitSignatureStatus(commit.hash, cwd)
+				return { ...commit, signatureStatus }
+			})
+		)
+
+		return commitsWithSignatures
+	} catch (error) {
+		console.error("Error verifying commit signatures:", error)
+		return []
 	}
 }
 
@@ -126,14 +286,22 @@ export async function getCommitInfo(hash: string, cwd: string): Promise<string> 
 		})
 		const [fullHash, shortHash, subject, author, date, body] = info.trim().split("\n")
 
+		// Get signature information
+		const signatureStatus = await getCommitSignatureStatus(hash, cwd)
+		
 		const { stdout: stats } = await execAsync(`git show --stat --format="" ${hash}`, { cwd })
 
 		const { stdout: diff } = await execAsync(`git show --format="" ${hash}`, { cwd })
+
+		const signatureInfo = signatureStatus.isSigned 
+			? `\nSignature: ${signatureStatus.signatureValid ? "✓ Valid" : "✗ Invalid"}${signatureStatus.signerName ? ` (${signatureStatus.signerName})` : ""}`
+			: "\nSignature: Not signed"
 
 		const summary = [
 			`Commit: ${shortHash} (${fullHash})`,
 			`Author: ${author}`,
 			`Date: ${date}`,
+			signatureInfo,
 			`\nMessage: ${subject}`,
 			body ? `\nDescription:\n${body}` : "",
 			"\nFiles Changed:",
